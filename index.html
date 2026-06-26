@@ -1,11 +1,727 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>나의 첫 깃허브 페이지</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 제비뽑기 & 자리 바꾸기 프로그램</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Canvas Confetti for celebration -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
+    body {
+      font-family: 'Pretendard', sans-serif;
+    }
+    /* 책상 배치 애니메이션 */
+    .desk-card {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .desk-assigned {
+      animation: popIn 0.5s ease-out forwards;
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
 </head>
-<body>
-    <h1>안녕하세요! 깃허브에 오신 것을 환영합니다.</h1>
-    <p>안녕하세요! </p>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col transition-colors duration-300">
+
+  <!-- 상단 네비게이션 헤더 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-md mx-auto px-4 py-4 flex flex-col items-center justify-center gap-4">
+      <!-- 로고 및 제목 영역 (영역 확장 원천 차단) -->
+      <div class="flex items-center gap-3 w-full justify-center shrink-0">
+        <div class="bg-indigo-600 text-white p-2.5 rounded-2xl shadow-lg shadow-indigo-100">
+          <i class="fa-solid fa-graduation-cap text-xl rotate-12"></i>
+        </div>
+        <div class="text-center">
+          <h1 class="text-xl font-bold tracking-tight text-slate-900">제비뽑기 & 자리 바꾸기</h1>
+          <p class="text-xs text-slate-500">교실과 모임에서 사용하는 즐거운 시뮬레이터</p>
+        </div>
+      </div>
+      <!-- 탭 메뉴 (터치 간섭 완벽 분리 및 즉시 터치 적용) -->
+      <nav class="flex w-full justify-center bg-slate-100 p-1 rounded-xl shrink-0">
+        <button type="button" onclick="switchTab('simple')" id="btn-tab-simple" class="tab-btn flex-1 px-2 py-2 text-sm font-semibold rounded-lg transition-all bg-white text-indigo-600 shadow-sm" style="touch-action: manipulation;">
+          <i class="fa-solid fa-bolt mr-1.5 pointer-events-none"></i>간편 뽑기
+        </button>
+        <button type="button" onclick="switchTab('matching')" id="btn-tab-matching" class="tab-btn flex-1 px-2 py-2 text-sm font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition-all" style="touch-action: manipulation;">
+          <i class="fa-solid fa-shuffle mr-1.5 pointer-events-none"></i>역할 매칭
+        </button>
+        <button type="button" onclick="switchTab('seats')" id="btn-tab-seats" class="tab-btn flex-1 px-2 py-2 text-sm font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition-all" style="touch-action: manipulation;">
+          <i class="fa-solid fa-chair mr-1.5 pointer-events-none"></i>자리 바꾸기
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 메인 컨텐츠 영역 -->
+  <main class="flex-1 max-w-md w-full mx-auto p-4 flex flex-col gap-6">
+
+    <!-- 1. 간편 뽑기 모드 -->
+    <section id="section-simple" class="tab-content block">
+      <div class="flex flex-col gap-6">
+        <!-- 왼쪽 입력 폼 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-2">1. 뽑을 대상 입력</label>
+            <textarea id="simple-items" rows="10" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed" placeholder="한 줄에 하나씩 입력하세요.&#10;예시:&#10;김철수&#10;이영희&#10;박민수&#10;정지원&#10;최지우"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-2">2. 당첨 인원</label>
+            <div class="flex items-center gap-2 w-full">
+              <button type="button" onclick="adjustCount('simple-count', -1)" class="w-10 h-10 shrink-0 border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center justify-center font-bold text-lg cursor-pointer">-</button>
+              <input type="number" id="simple-count" min="1" value="1" class="flex-1 min-w-0 w-full h-10 border border-slate-200 rounded-lg text-center font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <button type="button" onclick="adjustCount('simple-count', 1)" class="w-10 h-10 shrink-0 border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center justify-center font-bold text-lg cursor-pointer">+</button>
+            </div>
+          </div>
+          <button type="button" onclick="runSimpleDraw()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>추첨하기
+          </button>
+        </div>
+
+        <!-- 오른쪽 결과 화면 -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+            <h3 class="font-bold text-lg text-slate-900"><i class="fa-solid fa-square-poll-horizontal text-indigo-500 mr-2"></i>추첨 결과</h3>
+            <button onclick="resetSimpleDraw()" class="text-sm text-slate-400 hover:text-slate-600"><i class="fa-solid fa-rotate-right mr-1"></i>초기화</button>
+          </div>
+          <!-- 결과 대기/출력창 -->
+          <div id="simple-result-container" class="flex-1 flex flex-col items-center justify-center min-h-[300px] text-center">
+            <div id="simple-placeholder" class="text-slate-400">
+              <i class="fa-solid fa-ticket text-5xl mb-4 text-slate-200"></i>
+              <p class="font-medium">대상을 입력하고 추첨하기 버튼을 눌러주세요.</p>
+            </div>
+            <!-- 실제 결과 리스트 -->
+            <div id="simple-results" class="hidden w-full space-y-4">
+              <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-sm mb-2">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                추첨 완료!
+              </div>
+              <div id="simple-winner-cards" class="grid grid-cols-2 gap-3">
+                <!-- 결과 카드 주입 -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 역할 매칭 모드 -->
+    <section id="section-matching" class="tab-content hidden">
+      <div class="flex flex-col gap-6">
+        <!-- 대상자 입력 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-sm font-bold text-slate-700">그룹 A (이름/참여자)</label>
+              <span id="match-cnt-a" class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">0명</span>
+            </div>
+            <textarea id="match-items-a" rows="8" oninput="updateLineCount('match-items-a', 'match-cnt-a')" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed" placeholder="예시:&#10;유재석&#10;지석진&#10;김종국&#10;송지효&#10;하하"></textarea>
+          </div>
+        </div>
+
+        <!-- 역할/벌칙 입력 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-sm font-bold text-slate-700">그룹 B (역할/벌칙/상품)</label>
+              <span id="match-cnt-b" class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">0개</span>
+            </div>
+            <textarea id="match-items-b" rows="8" oninput="updateLineCount('match-items-b', 'match-cnt-b')" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed" placeholder="예시:&#10;1등 (상품권)&#10;2등 (커피)&#10;통과&#10;통과&#10;벌칙 (청소)"></textarea>
+          </div>
+          <div class="mt-auto">
+            <button type="button" onclick="runMatchingDraw()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 cursor-pointer">
+              <i class="fa-solid fa-arrows-spin"></i>매칭하기
+            </button>
+          </div>
+        </div>
+
+        <!-- 매칭 결과 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+            <h3 class="font-bold text-lg text-slate-900"><i class="fa-solid fa-link text-indigo-500 mr-2"></i>매칭 결과</h3>
+            <button onclick="resetMatchingDraw()" class="text-sm text-slate-400 hover:text-slate-600"><i class="fa-solid fa-rotate-right mr-1"></i>초기화</button>
+          </div>
+          <div id="matching-result-container" class="flex-1 flex flex-col items-center justify-center min-h-[300px] text-center">
+            <div id="matching-placeholder" class="text-slate-400">
+              <i class="fa-solid fa-arrow-right-arrow-left text-5xl mb-4 text-slate-200"></i>
+              <p class="font-medium text-sm">참여자와 역할을 각각 입력 후<br>매칭하기를 눌러주세요.</p>
+            </div>
+            <div id="matching-results" class="hidden w-full space-y-3 max-h-[320px] overflow-y-auto pr-1">
+              <!-- 매칭 결과 라인 주입 -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 교실 자리 바꾸기 모드 -->
+    <section id="section-seats" class="tab-content hidden">
+      <div class="flex flex-col gap-6">
+        
+        <!-- 왼쪽 옵션 및 명단 입력 영역 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-sm font-bold text-slate-700">배치할 학생 명단</label>
+              <button onclick="loadSampleStudents()" class="text-xs text-indigo-600 hover:underline font-semibold">예시 가져오기</button>
+            </div>
+            <textarea id="seat-students" rows="6" oninput="updateSeatingCounts()" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed" placeholder="한 줄에 학생 이름을 하나씩 입력하세요."></textarea>
+          </div>
+
+          <!-- 가로 세로 칸수 지정 -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 mb-1">가로 줄수 (열)</label>
+              <div class="flex items-center gap-1 w-full">
+                <button type="button" onclick="adjustGridSize('cols', -1)" class="w-8 h-8 shrink-0 border border-slate-200 rounded bg-slate-50 hover:bg-slate-100 flex items-center justify-center font-bold cursor-pointer">-</button>
+                <input type="number" id="grid-cols" min="1" max="10" value="6" readonly class="flex-1 min-w-0 w-full text-center font-bold text-slate-700 outline-none bg-transparent">
+                <button type="button" onclick="adjustGridSize('cols', 1)" class="w-8 h-8 shrink-0 border border-slate-200 rounded bg-slate-50 hover:bg-slate-100 flex items-center justify-center font-bold cursor-pointer">+</button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 mb-1">세로 줄수 (행)</label>
+              <div class="flex items-center gap-1 w-full">
+                <button type="button" onclick="adjustGridSize('rows', -1)" class="w-8 h-8 shrink-0 border border-slate-200 rounded bg-slate-50 hover:bg-slate-100 flex items-center justify-center font-bold cursor-pointer">-</button>
+                <input type="number" id="grid-rows" min="1" max="10" value="5" readonly class="flex-1 min-w-0 w-full text-center font-bold text-slate-700 outline-none bg-transparent">
+                <button type="button" onclick="adjustGridSize('rows', 1)" class="w-8 h-8 shrink-0 border border-slate-200 rounded bg-slate-50 hover:bg-slate-100 flex items-center justify-center font-bold cursor-pointer">+</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 현재 상태 보드 -->
+          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 space-y-1.5 text-xs text-slate-600">
+            <div class="flex justify-between">
+              <span>입력된 학생 수:</span>
+              <span id="seat-student-count" class="font-bold text-slate-900">0명</span>
+            </div>
+            <div class="flex justify-between">
+              <span>총 배치 가능 좌석:</span>
+              <span id="seat-available-count" class="font-bold text-indigo-600">0석</span>
+            </div>
+            <p class="text-[10px] text-slate-400 pt-1 border-t border-slate-200/60 leading-relaxed">
+              * 우측의 책상을 클릭하여 제외하고 싶은 자리(통로 또는 빈 책상)를 자유롭게 설정하세요.
+            </p>
+          </div>
+
+          <!-- 액션 버튼 -->
+          <button onclick="runSeatingArrangement()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-chair"></i>자리 무작위 배치
+          </button>
+        </div>
+
+        <!-- 오른쪽 교실 배치도 판넬 -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-h-[480px]">
+          <!-- 헤더 타이틀 및 옵션 -->
+          <div class="flex flex-col items-start justify-between border-b border-slate-100 pb-4 mb-4 gap-3">
+            <div class="w-full flex justify-between items-center">
+              <div>
+                <h3 class="font-bold text-lg text-slate-900"><i class="fa-solid fa-chalkboard-user text-indigo-500 mr-2"></i>교실 좌석 배치도</h3>
+                <p class="text-xs text-slate-400 mt-0.5">칠판 방향을 기준으로 자리가 배치됩니다.</p>
+              </div>
+            </div>
+            <!-- 범례 -->
+            <div class="flex items-center gap-3 text-xs w-full">
+              <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-indigo-50 border border-indigo-200 rounded"></span>배치 좌석</span>
+              <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-slate-100 border border-slate-200 border-dashed rounded"></span>제외 좌석</span>
+            </div>
+          </div>
+
+          <!-- 가상의 교실 공간 -->
+          <div class="flex-1 flex flex-col justify-between bg-slate-50/50 rounded-2xl border border-slate-100 p-4 relative overflow-auto">
+            
+            <!-- 교탁 / 칠판 영역 -->
+            <div class="w-full flex justify-center mb-6">
+              <div class="bg-slate-700 text-white text-xs font-bold tracking-widest px-12 py-2 rounded-lg shadow-sm flex items-center gap-2">
+                <i class="fa-solid fa-chalkboard"></i> 칠 판 (교 탁)
+              </div>
+            </div>
+
+            <!-- 책상 그리드 마운트 컨테이너 -->
+            <div class="flex-1 flex items-center justify-center">
+              <div id="seating-grid" class="grid gap-2.5 max-w-full">
+                <!-- 책상들이 동적으로 생성됩니다. -->
+              </div>
+            </div>
+
+            <!-- 하단 빠른 액션 바 -->
+            <div class="flex justify-end gap-2 mt-6 border-t border-slate-100 pt-3">
+              <button onclick="setAllSeatsActive(true)" class="text-xs font-medium text-slate-500 hover:text-indigo-600 bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm transition">
+                모두 사용
+              </button>
+              <button onclick="clearAllAssignedStudents()" class="text-xs font-medium text-slate-500 hover:text-red-500 bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm transition">
+                배치 초기화
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 가상 커스텀 알림/메시지 팝업 모달 -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-950 text-white px-6 py-3.5 rounded-2xl shadow-xl z-50 flex items-center gap-2.5 opacity-0 pointer-events-none transition-all duration-300 transform translate-y-2 w-11/12 max-w-sm">
+    <i id="toast-icon" class="fa-solid fa-circle-info text-amber-400"></i>
+    <span id="toast-msg" class="text-sm font-medium">안내 메시지입니다.</span>
+  </div>
+
+  <footer class="bg-white border-t border-slate-200 py-6 mt-8">
+    <div class="max-w-md mx-auto px-4 text-center text-slate-400 text-xs">
+      <p>© 2026 제비뽑기 프로그램. All Rights Reserved. 개발: Gemini</p>
+    </div>
+  </footer>
+
+  <script>
+    // 전역 상태 변수
+    let activeTab = 'simple';
+
+    // 탭 전환 시스템
+    function switchTab(tabId) {
+      activeTab = tabId;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`section-${tabId}`).classList.remove('hidden');
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm');
+        btn.classList.add('text-slate-600', 'hover:text-slate-900');
+      });
+
+      const activeBtn = document.getElementById(`btn-tab-${tabId}`);
+      activeBtn.classList.remove('text-slate-600', 'hover:text-slate-900');
+      activeBtn.classList.add('bg-white', 'text-indigo-600', 'shadow-sm');
+
+      // 자리 바꾸기 탭 전환 시 그리드 초기화
+      if (tabId === 'seats') {
+        renderSeatingGrid();
+      }
+    }
+
+    // 커스텀 메시지 안내 (Alert 대신 사용)
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+      const toastIcon = document.getElementById('toast-icon');
+
+      toastMsg.innerText = message;
+      
+      if (type === 'error') {
+        toastIcon.className = "fa-solid fa-circle-exclamation text-red-400";
+      } else if (type === 'success') {
+        toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
+      } else {
+        toastIcon.className = "fa-solid fa-circle-info text-amber-400";
+      }
+
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 2500);
+    }
+
+    // 카운트 조절 헬퍼
+    function adjustCount(inputId, diff) {
+      const input = document.getElementById(inputId);
+      let val = parseInt(input.value) || 1;
+      val = Math.max(1, val + diff);
+      input.value = val;
+    }
+
+    // 이름 카운트 카운터
+    function updateLineCount(textareaId, badgeId) {
+      const text = document.getElementById(textareaId).value;
+      const count = text.split('\n').filter(line => line.trim() !== '').length;
+      document.getElementById(badgeId).innerText = `${count}명`;
+    }
+
+    // 입력 텍스트 배열화 유틸리티
+    function getParsedLines(textareaId) {
+      return document.getElementById(textareaId).value
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line !== '');
+    }
+
+    // 피셔-예이츠 셔플 알고리즘
+    function shuffleArray(array) {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+
+    /* ========================================================
+       1. 간편 뽑기 로직
+       ======================================================== */
+    function runSimpleDraw() {
+      const items = getParsedLines('simple-items');
+      const drawCount = parseInt(document.getElementById('simple-count').value) || 1;
+
+      if (items.length === 0) {
+        showToast('대상을 한 줄에 하나씩 입력해 주세요.', 'error');
+        return;
+      }
+      if (drawCount > items.length) {
+        showToast(`추첨 인원이 대상 인원(${items.length}명)보다 많습니다.`, 'error');
+        return;
+      }
+
+      // 셔플 및 당첨자 추출
+      const shuffled = shuffleArray(items);
+      const winners = shuffled.slice(0, drawCount);
+
+      const placeholder = document.getElementById('simple-placeholder');
+      const resultsContainer = document.getElementById('simple-results');
+      const winnerCardsGrid = document.getElementById('simple-winner-cards');
+
+      placeholder.classList.add('hidden');
+      resultsContainer.classList.remove('hidden');
+      winnerCardsGrid.innerHTML = '';
+
+      // 당첨자 카드 생성 & 애니메이션
+      winners.forEach((winner, idx) => {
+        const card = document.createElement('div');
+        card.className = "bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 rounded-xl p-4 flex items-center justify-between shadow-sm scale-95 opacity-0 transition-all duration-300 transform translate-y-2";
+        card.style.transitionDelay = `${idx * 150}ms`;
+        card.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-sm">${idx + 1}</span>
+            <span class="font-bold text-slate-800 text-base">${winner}</span>
+          </div>
+          <span class="text-xs font-semibold bg-indigo-200 text-indigo-800 px-2.5 py-1 rounded-lg">당첨</span>
+        `;
+        winnerCardsGrid.appendChild(card);
+
+        // 시간차 렌더링 활성화
+        setTimeout(() => {
+          card.classList.remove('scale-95', 'opacity-0', 'translate-y-2');
+          card.classList.add('scale-100', 'opacity-100', 'translate-y-0');
+        }, 50);
+      });
+
+      // 콘페티 팡!
+      confetti({
+        particleCount: 80,
+        spread: 60,
+        origin: { y: 0.8 }
+      });
+    }
+
+    function resetSimpleDraw() {
+      document.getElementById('simple-placeholder').classList.remove('hidden');
+      document.getElementById('simple-results').classList.add('hidden');
+      document.getElementById('simple-winner-cards').innerHTML = '';
+      showToast('초기화되었습니다.', 'info');
+    }
+
+
+    /* ========================================================
+       2. 역할 매칭 로직
+       ======================================================== */
+    function runMatchingDraw() {
+      const groupA = getParsedLines('match-items-a');
+      const groupB = getParsedLines('match-items-b');
+
+      if (groupA.length === 0 || groupB.length === 0) {
+        showToast('그룹 A와 그룹 B에 각각 항목을 입력해주세요.', 'error');
+        return;
+      }
+
+      const countA = groupA.length;
+      const countB = groupB.length;
+
+      // 인원이 맞지 않는 경우, 더 적은 쪽에 맞춰 빈 슬롯 생성 또는 채우기
+      let processedB = [...groupB];
+      if (countA > countB) {
+        // 역할이 부족한 경우 나머지는 '꽝' 또는 '미매칭'으로 채움
+        const diff = countA - countB;
+        for (let i = 0; i < diff; i++) {
+          processedB.push('(빈 손/꽝)');
+        }
+      } else if (countB > countA) {
+        // 인원이 부족하면 역할 리스트를 축소 (사용자 편의)
+        processedB = processedB.slice(0, countA);
+      }
+
+      // 셔플링
+      const shuffledA = shuffleArray(groupA);
+      const shuffledB = shuffleArray(processedB);
+
+      const placeholder = document.getElementById('matching-placeholder');
+      const resultsDiv = document.getElementById('matching-results');
+
+      placeholder.classList.add('hidden');
+      resultsDiv.classList.remove('hidden');
+      resultsDiv.innerHTML = '';
+
+      // 결과 매칭 렌더링
+      shuffledA.forEach((person, idx) => {
+        const role = shuffledB[idx];
+        const isBlank = role.includes('(빈 손/꽝)');
+
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 transition-all scale-95 opacity-0";
+        row.style.transitionDelay = `${idx * 100}ms`;
+        
+        row.innerHTML = `
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-user text-slate-400 text-sm"></i>
+            <span class="font-bold text-slate-700">${person}</span>
+          </div>
+          <div class="h-px flex-1 border-t-2 border-dashed border-slate-200 mx-4"></div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold ${isBlank ? 'text-slate-400' : 'text-indigo-600'}">${role}</span>
+            <i class="fa-solid ${isBlank ? 'fa-circle-question text-slate-300' : 'fa-circle-check text-indigo-500'}"></i>
+          </div>
+        `;
+        resultsDiv.appendChild(row);
+
+        setTimeout(() => {
+          row.classList.remove('scale-95', 'opacity-0');
+          row.classList.add('scale-100', 'opacity-100');
+        }, 50);
+      });
+
+      confetti({
+        particleCount: 50,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 }
+      });
+      confetti({
+        particleCount: 50,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 }
+      });
+    }
+
+    function resetMatchingDraw() {
+      document.getElementById('matching-placeholder').classList.remove('hidden');
+      document.getElementById('matching-results').classList.add('hidden');
+      document.getElementById('matching-results').innerHTML = '';
+      showToast('매칭이 초기화되었습니다.', 'info');
+    }
+
+
+    /* ========================================================
+       3. 자리 바꾸기 로직 (핵심 기능)
+       ======================================================== */
+    let seatingRows = 5;
+    let seatingCols = 6;
+    let excludedSeats = new Set(); // 제외된 자리들 ("r,c" 형태)
+    let seatAssignments = {};      // 자리별 배정 정보 ("r,c" -> 학생 이름)
+
+    // 가로 세로 칸 수 조절기
+    function adjustGridSize(type, diff) {
+      if (type === 'cols') {
+        const input = document.getElementById('grid-cols');
+        let val = parseInt(input.value) || 6;
+        val = Math.max(1, Math.min(10, val + diff));
+        input.value = val;
+        seatingCols = val;
+      } else if (type === 'rows') {
+        const input = document.getElementById('grid-rows');
+        let val = parseInt(input.value) || 5;
+        val = Math.max(1, Math.min(10, val + diff));
+        input.value = val;
+        seatingRows = val;
+      }
+      
+      // 혹시 늘리거나 줄였을 때 범위를 벗어나는 제외 좌석 필터링
+      cleanExcludedSeats();
+      // 배치도 다시 그리기
+      renderSeatingGrid();
+      updateSeatingCounts();
+    }
+
+    // 그리드를 리셋하거나 바꿨을 때 범위 밖의 제외된 좌석 정보 삭제
+    function cleanExcludedSeats() {
+      const activeKeys = [...excludedSeats];
+      activeKeys.forEach(key => {
+        const [r, c] = key.split(',').map(Number);
+        if (r >= seatingRows || c >= seatingCols) {
+          excludedSeats.delete(key);
+        }
+      });
+    }
+
+    // 학생 예시 가져오기 (16명 이름 반영)
+    function loadSampleStudents() {
+      const sample = [
+        "고은결", "공소연", "김민찬", "박시현", "박현준", "백세현", "손영수", "송유나",
+        "안다미로", "오사랑", "유미카엘", "유인우", "이서현", "이채원", "임준호", "전연우"
+      ];
+      document.getElementById('seat-students').value = sample.join('\n');
+      updateSeatingCounts();
+      showToast('16명의 예시 명단을 불러왔습니다.', 'success');
+    }
+
+    // 자리 통계 업데이트
+    function updateSeatingCounts() {
+      const students = getParsedLines('seat-students');
+      document.getElementById('seat-student-count').innerText = `${students.length}명`;
+
+      const totalSeats = seatingRows * seatingCols;
+      const availableSeatsCount = totalSeats - excludedSeats.size;
+      document.getElementById('seat-available-count').innerText = `${availableSeatsCount}석`;
+    }
+
+    // 전체 좌석을 모두 사용 혹은 모두 비우기
+    function setAllSeatsActive(isActive) {
+      if (isActive) {
+        excludedSeats.clear();
+      } else {
+        for (let r = 0; r < seatingRows; r++) {
+          for (let c = 0; c < seatingCols; c++) {
+            excludedSeats.add(`${r},${c}`);
+          }
+        }
+      }
+      renderSeatingGrid();
+      updateSeatingCounts();
+    }
+
+    // 배치 결과만 초기화
+    function clearAllAssignedStudents() {
+      seatAssignments = {};
+      renderSeatingGrid();
+      showToast('배치 상태가 초기화되었습니다.', 'info');
+    }
+
+    // 가상의 교실 배치도 HTML 드로잉
+    function renderSeatingGrid() {
+      const grid = document.getElementById('seating-grid');
+      grid.innerHTML = '';
+      
+      // 열 개수에 맞게 Tailwind CSS grid-template-columns 동적 지정
+      grid.style.gridTemplateColumns = `repeat(${seatingCols}, minmax(0, 1fr))`;
+
+      for (let r = 0; r < seatingRows; r++) {
+        for (let c = 0; c < seatingCols; c++) {
+          const key = `${r},${c}`;
+          const isExcluded = excludedSeats.has(key);
+          const studentName = seatAssignments[key];
+
+          const desk = document.createElement('div');
+          // 디자인 토큰: 둥근 테두리, 우드 감성의 부드러운 오렌지/앰버 톤 혹은 슬레이트 톤 활용
+          desk.className = `desk-card relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex flex-col items-center justify-center p-2 text-center select-none cursor-pointer border transition-all duration-300
+            ${isExcluded 
+              ? 'bg-slate-100 border-dashed border-slate-200 text-slate-300' 
+              : studentName 
+                ? 'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-300 text-amber-900 shadow-sm desk-assigned' 
+                : 'bg-white border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30 text-slate-400'
+            }`;
+
+          desk.onclick = () => toggleSeatState(r, c);
+
+          if (isExcluded) {
+            desk.innerHTML = `
+              <i class="fa-solid fa-ban text-lg text-slate-300 mb-1"></i>
+              <span class="text-[10px] font-semibold text-slate-400">통로/제외</span>
+            `;
+          } else {
+            if (studentName) {
+              desk.innerHTML = `
+                <i class="fa-solid fa-chair text-xs text-amber-500/80 mb-1"></i>
+                <span class="font-extrabold text-sm tracking-wide text-slate-800">${studentName}</span>
+                <span class="text-[9px] text-amber-600 mt-1 font-semibold">${r + 1}-${c + 1}</span>
+              `;
+            } else {
+              desk.innerHTML = `
+                <i class="fa-solid fa-plus text-xs text-slate-300 mb-1"></i>
+                <span class="text-[10px] text-slate-400 font-medium">빈자리</span>
+                <span class="text-[9px] text-slate-300 mt-1">${r + 1}-${c + 1}</span>
+              `;
+            }
+          }
+
+          grid.appendChild(desk);
+        }
+      }
+      updateSeatingCounts();
+    }
+
+    // 좌석 클릭 상태 제어 (빈 공간으로 뺄지 말지 설정)
+    function toggleSeatState(r, c) {
+      const key = `${r},${c}`;
+      if (excludedSeats.has(key)) {
+        // 제외 좌석을 다시 활성화
+        excludedSeats.delete(key);
+      } else {
+        // 활성화 좌석을 제외로 지정 (만약 배치된 학생이 있었다면 이름도 소멸)
+        excludedSeats.add(key);
+        delete seatAssignments[key];
+      }
+      renderSeatingGrid();
+      updateSeatingCounts();
+    }
+
+    // 최종 교실 자리 바꾸기 배치 연산
+    function runSeatingArrangement() {
+      const students = getParsedLines('seat-students');
+      if (students.length === 0) {
+        showToast('배치할 학생 명단을 먼저 입력해 주세요.', 'error');
+        return;
+      }
+
+      // 배치 가능한 실질적 좌석 리스트 준비
+      const availableSeatCoordinates = [];
+      for (let r = 0; r < seatingRows; r++) {
+        for (let c = 0; c < seatingCols; c++) {
+          const key = `${r},${c}`;
+          if (!excludedSeats.has(key)) {
+            availableSeatCoordinates.push(key);
+          }
+        }
+      }
+
+      // 좌석 공간 체크
+      if (students.length > availableSeatCoordinates.length) {
+        showToast(`학생 수(${students.length}명)가 배치 가능 좌석 수(${availableSeatCoordinates.length}석)보다 많습니다. 가로/세로를 늘리거나 제외 구역을 줄여주세요.`, 'error');
+        return;
+      }
+
+      // 1. 좌석 좌표들 셔플링
+      const shuffledCoordinates = shuffleArray(availableSeatCoordinates);
+      
+      // 2. 초기화 후 배정 매핑
+      seatAssignments = {};
+      students.forEach((student, index) => {
+        const assignedSeatKey = shuffledCoordinates[index];
+        seatAssignments[assignedSeatKey] = student;
+      });
+
+      // 3. 렌더링
+      renderSeatingGrid();
+      showToast('무작위 교실 자리 배치가 완료되었습니다!', 'success');
+
+      // 환상적인 배치 성공 기념 콘페티 효과
+      confetti({
+        particleCount: 80,
+        spread: 80,
+        origin: { y: 0.8 }
+      });
+    }
+
+    // 초기 실행 보정
+    window.onload = function() {
+      renderSeatingGrid();
+    }
+  </script>
 </body>
 </html>
